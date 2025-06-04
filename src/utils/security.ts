@@ -364,7 +364,6 @@ export function generateExecuteApiToolFunction(
 
   // Generate complete execute API tool function
   return `
-${oauth2TokenAcquisitionCode}
 
 /**
  * Executes an API tool with the provided arguments
@@ -405,7 +404,7 @@ async function executeApiTool(
     let requestBodyData: any = undefined;
 
     // Apply parameters to the URL path, query, or headers
-    definition.executionParameters.forEach((param) => {
+    definition.executionParameters.forEach((param: any) => {
         const value = validatedArgs[param.name];
         if (typeof value !== 'undefined' && value !== null) {
             if (param.in === 'path') {
@@ -433,8 +432,6 @@ async function executeApiTool(
         requestBodyData = validatedArgs['requestBody'];
         headers['content-type'] = definition.requestBodyContentType;
     }
-
-${securityCode}
 
     // Prepare the axios request configuration
     const config: AxiosRequestConfig = {

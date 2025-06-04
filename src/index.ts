@@ -14,6 +14,7 @@ import { OpenAPIV3 } from 'openapi-types';
 // Import generators
 import {
   generateMcpServerCode,
+  generateToolsCode,
   generatePackageJson,
   generateTsconfigJson,
   generateGitignore,
@@ -73,12 +74,11 @@ program
   )
   .option('--force', 'Overwrite existing files without prompting')
   .version('3.1.1') // Match package.json version
-  .action(options => {
-    runGenerator(options)
-      .catch((error) => {
-        console.error('Unhandled error:', error);
-        process.exit(1);
-      });
+  .action((options) => {
+    runGenerator(options).catch((error) => {
+      console.error('Unhandled error:', error);
+      process.exit(1);
+    });
   });
 
 // Export the program object for use in bin stub
@@ -94,6 +94,7 @@ async function runGenerator(options: CliOptions & { force?: boolean }) {
 
   const srcDir = path.join(outputDir, 'src');
   const serverFilePath = path.join(srcDir, 'index.ts');
+  const toolsFilePath = path.join(srcDir, 'tools.ts');
   const packageJsonPath = path.join(outputDir, 'package.json');
   const tsconfigPath = path.join(outputDir, 'tsconfig.json');
   const gitignorePath = path.join(outputDir, '.gitignore');
@@ -142,6 +143,7 @@ async function runGenerator(options: CliOptions & { force?: boolean }) {
 
     console.error('Generating server code...');
     const serverTsContent = generateMcpServerCode(api, options, serverName, serverVersion);
+    const toolsCode = generateToolsCode(api);
 
     console.error('Generating package.json...');
     const packageJsonContent = generatePackageJson(
@@ -176,6 +178,9 @@ async function runGenerator(options: CliOptions & { force?: boolean }) {
 
     await fs.writeFile(serverFilePath, serverTsContent);
     console.error(` -> Created ${serverFilePath}`);
+
+    await fs.writeFile(toolsFilePath, toolsCode);
+    console.error(` -> Created ${toolsFilePath}`);
 
     await fs.writeFile(packageJsonPath, packageJsonContent);
     console.error(` -> Created ${packageJsonPath}`);

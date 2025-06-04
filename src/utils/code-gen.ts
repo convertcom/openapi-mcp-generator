@@ -57,8 +57,7 @@ export function generateToolDefinitionMap(
     method: "${tool.method}",
     pathTemplate: "${tool.pathTemplate}",
     executionParameters: ${execParamsString},
-    requestBodyContentType: ${tool.requestBodyContentType ? `"${tool.requestBodyContentType}"` : 'undefined'},
-    securityRequirements: ${securityReqsString}
+    requestBodyContentType: ${tool.requestBodyContentType ? `"${tool.requestBodyContentType}"` : 'undefined'}
   }],`;
     })
     .join('');
@@ -72,12 +71,7 @@ export function generateToolDefinitionMap(
 export function generateListToolsHandler(): string {
   return `
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const toolsForClient: Tool[] = Array.from(toolDefinitionMap.values()).map(def => ({
-    name: def.name,
-    description: def.description,
-    inputSchema: def.inputSchema
-  }));
-  return { tools: toolsForClient };
+  return { tools: getToolsForClient() };
 });
 `;
 }

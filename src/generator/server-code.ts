@@ -24,14 +24,8 @@ export function generateMcpServerCode(
   serverName: string,
   serverVersion: string
 ): string {
-  // Extract tools from API
-  const tools = extractToolsFromApi(api);
-
   // Determine base URL
   const determinedBaseUrl = determineBaseUrl(api, options.baseUrl);
-
-  // Generate code for tool definition map
-  const toolDefinitionMapCode = generateToolDefinitionMap(tools, api.components?.securitySchemes);
 
   // Generate code for API tool execution
   const executeApiToolFunctionCode = generateExecuteApiToolFunction(
@@ -105,24 +99,64 @@ import {
 import { z, ZodError } from 'zod';
 import { jsonSchemaToZod } from 'json-schema-to-zod';
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios';
+if (process.env.NODE_ENV === 'development') {
+  import('mcps-logger/console');
+}
+import './api-config.js';
+import { toolDefinitionMap, McpToolDefinition } from './tools.js';
 
 /**
  * Type definition for JSON objects
  */
 type JsonObject = Record<string, any>;
 
-/**
- * Interface for MCP Tool Definition
- */
-interface McpToolDefinition {
-    name: string;
-    description: string;
-    inputSchema: any;
-    method: string;
-    pathTemplate: string;
-    executionParameters: { name: string, in: string }[];
-    requestBodyContentType?: string;
-    securityRequirements: any[];
+function getToolsForClient(): Tool[] {
+  const reportingTools = [
+    'getaccountslist',
+    'getaccountlivedata',
+    'getaccountactivecompletedexperienceslist',
+    'getprojectslist',
+    'getproject',
+    'getprojectlivedata',
+    'getexperienceslist',
+    'getexperience',
+    'getexperiencebykey',
+    'getexperiencelivedata',
+    'getexperienceaggregatedreport',
+    'getexperiencedailyreport',
+    'getexperiencedailytrafficallocation',
+    'getgoal',
+    'getgoalbykey',
+    'getlocation',
+    'getlocationslist',
+    'getaudienceslist',
+    'getaudience',
+    'getfeatureslist',
+    'getfeature',
+    'getfeaturebykey',
+  ];
+  const toolSet = process.env.TOOLS_FOR_CLIENT ?? 'reporting';
+  return Array.from(toolDefinitionMap.values())
+    .filter((def) => {
+      if (toolSet === 'readOnly') {
+        if (def.name.match(/^get/)) {
+          return true;
+        }
+        return false;
+      } else if (toolSet === 'reporting') {
+        return reportingTools.indexOf(def.name) !== -1;
+      }
+
+      return true;
+    })
+    .map((def) => {
+      return {
+        name: def.name,
+        description: def.description,
+        inputSchema: def.inputSchema,
+      };
+    })
+    .filter((tool) => tool !== null);
 }
 
 /**
@@ -139,13 +173,6 @@ const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
     { capabilities: { tools: {} } }
 );
-
-/**
- * Map of tool definitions by name
- */
-const toolDefinitionMap: Map<string, McpToolDefinition> = new Map([
-${toolDefinitionMapCode}
-]);
 
 /**
  * Security schemes from the OpenAPI spec
@@ -241,3 +268,25 @@ function getZodSchemaFromJsonSchema(jsonSchema: any, toolName: string): z.ZodTyp
 }
 `;
 }
+
+export const generateToolsCode = (api: OpenAPIV3.Document) => {
+  const tools = extractToolsFromApi(api);
+  const toolDefinitionMapCode = generateToolDefinitionMap(tools, api.components?.securitySchemes);
+  return `
+  /**
+   * Interface for MCP Tool Definition
+   */
+  export interface McpToolDefinition {
+      name: string;
+      description: string;
+      inputSchema: any;
+      method: string;
+      pathTemplate: string;
+      executionParameters: { name: string, in: string }[];
+      requestBodyContentType?: string;
+  }
+  export const toolDefinitionMap: Map<string, McpToolDefinition> = new Map([
+${toolDefinitionMapCode}
+]);
+  `;
+};
